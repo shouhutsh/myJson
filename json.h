@@ -16,10 +16,9 @@ struct JsonEntity {
      */
     void *	desc;
     void *	data;
-
-    char * (*toString)(struct JsonEntity *);
 };
 
+char * toString(struct JsonEntity *);
 void jsonPrint(struct JsonEntity *);
 
 char * atomToString(struct JsonEntity *);
@@ -27,6 +26,9 @@ char * objectToString(struct JsonEntity *);
 char * arrayToString(struct JsonEntity *);
 char * (*JSON_toString[JSON_TYPE_COUNT])(struct JsonEntity *) = {atomToString, objectToString, arrayToString};
 
-struct JsonEntity * new_JsonEntity(int);
+struct JsonEntity * new_JsonEntity(int, void *, void *);
+void delete_JsonEntity(struct JsonEntity *);
+
+#define size(json)  (*((int *)json->desc))
 
 #endif
