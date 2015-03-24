@@ -1,10 +1,10 @@
 CC=gcc
 CFLAGS= -g -Wall
 
-ALL: json
+ALL:test
 
-json: json.c
+test: test.c json.c
 	$(CC) -o $@ $^ $(CFLAGS)
 
-clean: json
-	rm $^
+clean:
+	rm -rf test

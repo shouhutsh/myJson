@@ -8,27 +8,22 @@
 #define JSON_TYPE_COUNT	3
 
 struct JsonEntity {
-    int	state;
-    /*
-      desc
-      如果json类型为atom则描述为字符串
-      如果类型为object或array则代表长度
-     */
-    void *	desc;
-    void *	data;
+    int type;
+    void * desc;
+    void * data;
 };
-
-char * toString(struct JsonEntity *);
-void jsonPrint(struct JsonEntity *);
 
 char * atomToString(struct JsonEntity *);
 char * objectToString(struct JsonEntity *);
 char * arrayToString(struct JsonEntity *);
-char * (*JSON_toString[JSON_TYPE_COUNT])(struct JsonEntity *) = {atomToString, objectToString, arrayToString};
 
+struct JsonEntity * add_children(struct JsonEntity *, struct JsonEntity *);
 struct JsonEntity * new_JsonEntity(int, void *, void *);
 void delete_JsonEntity(struct JsonEntity *);
 
-#define size(json)  (*((int *)json->desc))
+int inc(void *);
+int sizeOf(struct JsonEntity *);
+void jsonPrint(struct JsonEntity *);
+char * toString(struct JsonEntity *);
 
 #endif

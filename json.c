@@ -4,105 +4,136 @@
 
 #include "json.h"
 
+char * (*JSON_toString[JSON_TYPE_COUNT])(struct JsonEntity *) =
+{atomToString, objectToString, arrayToString};
+
 char * toString(struct JsonEntity * json){
-    return JSON_toString[json->state](json);
+    return JSON_toString[json->type](json);
 }
 
 void jsonPrint(struct JsonEntity * json){
-    char * str = JSON_toString[json->state](json);
+    char * str = JSON_toString[json->type](json);
     printf("%s", str);
     free(str);
 }
 
-char * atomToString(struct JsonEntity * json){
-    if(ATOM_TYPE != json->state){
+int inc(void * data){
+    return (*((int *) data))++;
+}
+
+int sizeOf(struct JsonEntity * json){
+    if(NULL == json){
         exit(0);
     }
 
-    int len = 0;
-    char * str = NULL, * desc = NULL, * data = NULL;
+    if(NULL == json->desc){
+        return 0;
+    }
+    return *((int *) json->desc);
+}
+
+char * atomToString(struct JsonEntity * json){
+    if(NULL == json || ATOM_TYPE != json->type || NULL == json->data){
+        exit(0);
+    }
+
+    int len = 0, l;
+    char * str = (char *) calloc(1, sizeof(char));
 
     if(NULL != json->desc){
-        int l = 3 + strlen(json->desc);
-        desc = (char *) malloc(l + 1);
-        sprintf(desc, "\"%s\":", (char *)json->desc);
+        l = 3 + strlen(json->desc);
+        str = realloc(str, len + l + 1);
+        sprintf(str+len, "\"%s\":", (char *)json->desc);
         len += l;
-    }else{
-        desc = (char *) calloc(1, sizeof(char));
-    }
-    if(NULL != json->data){
-        int l = strlen(json->data);
-        data = (char *) malloc(l + 1);
-        sprintf(data, "%s", (char *)json->data);
-        len += l;
-    }else{
-        data = (char *) calloc(1, sizeof(char));
     }
 
-    str = (char *) malloc(sizeof(len+1));
+    l = strlen(json->data);
+    str = realloc(str, len + l + 1);
+    sprintf(str+len, "%s", (char *)json->data);
 
-    sprintf(str, "%s%s", desc, data);
-
-    free(desc);
-    free(data);
     return str;
 }
 
 char * objectToString(struct JsonEntity * json){
-    if(OBJECT_TYPE != json->state){
+    if(NULL == json || OBJECT_TYPE != json->type){
         exit(0);
     }
 
-    int size = size(json);
-    char * str = NULL, * data = NULL;
+    int i, len = 2;
+    int size = sizeOf(json);
+    char * str = (char *) calloc(len + 1, sizeof(char));
+    struct JsonEntity ** items = json->data;
 
-    while(size-- >= 0){
-        data = toString(json->data);
-        str = (char *) malloc(sizeof(3 + strlen(data)));
-        sprintf(str, "{%s}", data);
+    str[0] = '{';
+    for(i = 0; i < size; i++){
+        char * data = toString(items[i]);
+        int l = strlen(data);
+        str = realloc(str, len + l + 2);
+        sprintf(str+len-1, "%s,", data);
+        len += l;
     }
+    str[len-1] = '}';
     return str;
 }
 
-// TODO
 char * arrayToString(struct JsonEntity * json){
-    if(ARRAY_TYPE != json->state){
+    if(NULL == json || ARRAY_TYPE != json->type){
         exit(0);
     }
 
-    return NULL;
+    int i, len = 2;
+    int size = sizeOf(json);
+    char * str = (char *) calloc(len + 1, sizeof(char));
+    struct JsonEntity ** items = json->data;
+
+    str[0] = '[';
+    for(i = 0; i < size; i++){
+        char * data = toString(items[i]);
+        int l = strlen(data);
+        str = realloc(str, len + l + 2);
+        sprintf(str+len-1, "%s,", data);
+        len += l;
+    }
+    str[len-1] = ']';
+    return str;
+}
+
+struct JsonEntity * add_children(struct JsonEntity * root, struct JsonEntity * child){
+    if(ATOM_TYPE == root->type){
+        exit(0);
+    }
+
+    if(NULL == root->desc){
+        root->desc = calloc(1, sizeof(int));
+        root->data = calloc(1, sizeof(void **));
+    }
+
+    inc(root->desc);
+    root->data = realloc(root->data, sizeof(void **) * sizeOf(root));
+
+    ((struct JsonEntity **)root->data)[sizeOf(root)-1] = child;
+    return root;
 }
 
 struct JsonEntity * new_JsonEntity(int type, void * desc, void * data){
-    struct JsonEntity * json = (struct JsonEntity *) malloc(sizeof(struct JsonEntity));
-    memset(json, 0, sizeof(*json));
-    json->state = type;
+    struct JsonEntity * json = (struct JsonEntity *) calloc(1, sizeof(struct JsonEntity));
+    json->type = type;
     json->desc = desc;
     json->data = data;
     return json;
 }
 
 void delete_JsonEntity(struct JsonEntity * json){
-    free(json->desc);
-    if(ATOM_TYPE == json->state){
+    if(ATOM_TYPE == json->type){
         free(json->data);
     }else{
-        delete_JsonEntity(json->data);
+        int i, size = sizeOf(json);
+        struct JsonEntity ** items = json->data;
+
+        for(i = 0; i < size; i++){
+            delete_JsonEntity(items[i]);
+        }
     }
+    free(json->desc);
     free(json);
-}
-
-int main(void)
-{
-    char * hello = strcpy(malloc(sizeof(6)), "hello");
-    char * world = strcpy(malloc(sizeof(6)), "world");
-    int * len = (int *) malloc(sizeof(int));
-    *len = 1;
-    struct JsonEntity * atom = new_JsonEntity(ATOM_TYPE, hello, world);
-    struct JsonEntity * json = new_JsonEntity(OBJECT_TYPE, len, atom);
-
-    jsonPrint(json);
-    
-    delete_JsonEntity(json);
-    return 0;
 }
