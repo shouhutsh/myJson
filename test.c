@@ -6,23 +6,18 @@
 
 int main(void)
 {
-    char * hello = strcpy(malloc(sizeof(6)), "hello");
-    char * world = strcpy(malloc(sizeof(6)), "world");
-    char * array1= strcpy(malloc(sizeof(7)), "array1");
-    char * array2= strcpy(malloc(sizeof(7)), "array2");
-    struct JsonEntity * atom = new_JsonEntity(ATOM_TYPE, hello, world);
-    struct JsonEntity * json = new_JsonEntity(OBJECT_TYPE, NULL, NULL);
+    struct JsonEntity * object = new_Object();
 
-    add_children(json, atom);
-    add_children(json,
-        add_children(
-            add_children(
-                new_JsonEntity(ARRAY_TYPE, NULL, NULL),
-                new_JsonEntity(ATOM_TYPE, NULL, array1)),
-                new_JsonEntity(ATOM_TYPE, NULL, array2)));
+    add_Children(object,
+        add_Children(new_Array(),
+            new_Atom("hello"),
+            new_Atom("world"),
+                     ADD_END),
+        new_Pear("key", "value"),
+                 ADD_END);
 
-    jsonPrint(json);
+    jsonPrint(object);
 
-    delete_JsonEntity(json);
+    delete_Json(object);
     return 0;
 }

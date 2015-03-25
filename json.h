@@ -1,29 +1,37 @@
 #ifndef _JSON_H
 #define _JSON_H
 
-#define ATOM_TYPE	0
-#define OBJECT_TYPE 1
-#define ARRAY_TYPE	2
+#define ATOM_TYPE   0
+#define PEAR_TYPE   1
+#define OBJECT_TYPE 2
+#define ARRAY_TYPE  3
 
-#define JSON_TYPE_COUNT	3
+typedef union{
+    int size;
+    char * key;
+} Key;
+
+typedef union{
+    char * value;
+    struct JsonEntity ** items;
+}Value;
 
 struct JsonEntity {
     int type;
-    void * desc;
-    void * data;
+    Key desc;
+    Value data;
 };
 
-char * atomToString(struct JsonEntity *);
-char * objectToString(struct JsonEntity *);
-char * arrayToString(struct JsonEntity *);
+#define ADD_END ((struct JsonEntity *) NULL)
+struct JsonEntity * add_Children(struct JsonEntity *, struct JsonEntity *, ...);
 
-struct JsonEntity * add_children(struct JsonEntity *, struct JsonEntity *);
-struct JsonEntity * new_JsonEntity(int, void *, void *);
-void delete_JsonEntity(struct JsonEntity *);
-
-int inc(void *);
-int sizeOf(struct JsonEntity *);
 void jsonPrint(struct JsonEntity *);
-char * toString(struct JsonEntity *);
+char * getString(struct JsonEntity *);
+
+struct JsonEntity * new_Atom(const char *);
+struct JsonEntity * new_Pear(const char *, const char *);
+struct JsonEntity * new_Object();
+struct JsonEntity * new_Array();
+void delete_Json(struct JsonEntity *);
 
 #endif
