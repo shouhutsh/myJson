@@ -9,12 +9,14 @@ int main(void)
     struct JsonEntity * object = new_Object();
 
     add_Children(object,
-        add_Children(new_Array(),
-            new_Atom("hello"),
-            new_Atom("world"),
-                     ADD_END),
-        new_Pear("key", "value"),
-                 ADD_END);
+        new_Pair("array",
+            add_Children(new_Array(),
+                new_Atom("hello"),
+                new_Atom("world"),
+                ADD_END)),
+        new_Pair("key",
+            new_Atom("value")),
+        ADD_END);
 
     jsonPrint(object);
 

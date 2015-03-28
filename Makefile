@@ -1,10 +1,13 @@
 CC=gcc
 CFLAGS= -g -Wall
 
-ALL:test
+ALL:encode_test parse_test
 
-test: test.c json.c
+encode_test: encode_test.c json.c
+	$(CC) -o $@ $^ $(CFLAGS)
+
+parse_test: parse_test.c json.c
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
-	rm -rf test
+	rm -rf encode_test parse_test

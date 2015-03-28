@@ -5,64 +5,57 @@
 
 #include "json.h"
 
-#define JSON_TYPE_COUNT	4
-
 char * atomToString(struct JsonEntity *);
-char * pearToString(struct JsonEntity *);
+char * pairToString(struct JsonEntity *);
 char * objectToString(struct JsonEntity *);
 char * arrayToString(struct JsonEntity *);
 
-#define type(json) ((json)->type)
-#define desc(json) ((json)->desc)
-#define data(json) ((json)->data)
-#define inc(json) (desc(json).size++)
-#define sizeOf(json) (desc(json).size)
-
-char * (*JSON_toString[JSON_TYPE_COUNT])(struct JsonEntity *) = {atomToString, pearToString, objectToString, arrayToString};
+char * (*TO_STRING[JSON_TYPE_COUNT])(struct JsonEntity *) = {atomToString, pairToString, objectToString, arrayToString};
 
 char * getString(struct JsonEntity * json){
-    return JSON_toString[type(json)](json);
+    return TO_STRING[type(json)](json);
 }
 
 void jsonPrint(struct JsonEntity * json){
-    char * str = JSON_toString[type(json)](json);
+    char * str = TO_STRING[type(json)](json);
     printf("%s", str);
     free(str);
 }
 
 char * atomToString(struct JsonEntity * json){
-    if(NULL == json || ATOM_TYPE != type(json) || NULL == data(json).value){
+    if(NULL == json || ATOM_TYPE != type(json) || NULL == value(json)){
         exit(0);
     }
 
-    int len = strlen(data(json).value);
+    int len = strlen(value(json));
     char * str = (char *) calloc(len+1, sizeof(char));
 
-    sprintf(str, "%s", data(json).value);
+    sprintf(str, "%s", value(json));
     return str;
 }
 
-char * pearToString(struct JsonEntity * json){
-    if(NULL == json || PEAR_TYPE != type(json) || NULL == desc(json).key || NULL == data(json).value){
+char * pairToString(struct JsonEntity * json){
+    if(NULL == json || PAIR_TYPE != type(json) || NULL == key(json) || NULL == value(json)){
         exit(0);
     }
 
-    int len = strlen(desc(json).key) + strlen(data(json).value);
+    char * value = getString(entity(json));
+    int len = strlen(key(json)) + (NULL == value ? 0 : strlen(value));
     char * str = (char *) calloc(len+4, sizeof(char));
 
-    sprintf(str, "\"%s\":%s", desc(json).key, data(json).value);
+    sprintf(str, "\"%s\":%s", key(json), value);
     return str;
 }
 
-char * OA_ToString(struct JsonEntity * json, char left, char right){
-    int size = sizeOf(json);
+char * OA_ToString(const struct JsonEntity * json, char left, char right){
+    int size = size(json);
     char *str = (char *)malloc(3);
     if(0 == size){
         str[0] = left, str[1] = right;
     }else{
         int i, len = 1;
         for(i = 0; i < size; i++){
-            char * data = getString(data(json).items[i]);
+            char * data = getString(item(json, i));
             int l = strlen(data);
             str = realloc(str, len + l + 2);
             sprintf(str+len, "%s,", data);
@@ -79,9 +72,7 @@ char * objectToString(struct JsonEntity * json){
         exit(0);
     }
 
-    char * str = OA_ToString(json, '{', '}');
-
-    return str;
+    return OA_ToString(json, '{', '}');
 }
 
 char * arrayToString(struct JsonEntity * json){
@@ -89,9 +80,18 @@ char * arrayToString(struct JsonEntity * json){
         exit(0);
     }
 
-    char * str = OA_ToString(json, '[', ']');
+    return OA_ToString(json, '[', ']');
+}
 
-    return str;
+struct JsonEntity * add_Child(struct JsonEntity * root, struct JsonEntity * child){
+    if(NULL == root || NULL == child || ATOM_TYPE == type(root)){
+        exit(0);
+    }
+
+    inc(root);
+    items(root) = realloc(items(root), sizeof(void **) * size(root));
+    item(root, size(root)-1) = child;
+    return root;
 }
 
 struct JsonEntity * add_Children(struct JsonEntity * root, struct JsonEntity * child, ...){
@@ -104,8 +104,8 @@ struct JsonEntity * add_Children(struct JsonEntity * root, struct JsonEntity * c
 
     while(ADD_END != child){
         inc(root);
-        data(root).items = realloc(data(root).items, sizeof(void **) * sizeOf(root));
-        data(root).items[sizeOf(root)-1] = child;
+        items(root) = realloc(items(root), sizeof(void **) * size(root));
+        item(root, size(root)-1) = child;
 
         child = va_arg(ap, struct JsonEntity *);
     }
@@ -116,15 +116,15 @@ struct JsonEntity * add_Children(struct JsonEntity * root, struct JsonEntity * c
 struct JsonEntity * new_Atom(const char * value){
     struct JsonEntity * json = (struct JsonEntity *) calloc(1, sizeof(struct JsonEntity));
     type(json) = ATOM_TYPE;
-    data(json).value = strcpy(malloc(strlen(value)+1), value);
+    value(json) = strcpy(malloc(strlen(value)+1), value);
     return json;
 }
 
-struct JsonEntity * new_Pear(const char * key, const char * value){
+struct JsonEntity * new_Pair(const char * key, struct JsonEntity * entity){
     struct JsonEntity * json = (struct JsonEntity *) calloc(1, sizeof(struct JsonEntity));
-    type(json) = PEAR_TYPE;
-    desc(json).key = strcpy(malloc(strlen(key)+1), key);
-    data(json).value = strcpy(malloc(strlen(value)+1), value);
+    type(json) = PAIR_TYPE;
+    key(json) = strcpy(malloc(strlen(key)+1), key);
+    entity(json) = entity;
     return json;
 }
 
@@ -141,16 +141,230 @@ struct JsonEntity * new_Array(){
 }
 
 void delete_Json(struct JsonEntity * json){
-    if(ATOM_TYPE == type(json) || PEAR_TYPE == type(json)){
-        free(desc(json).key);
-        free(data(json).value);
+    if(ATOM_TYPE == type(json) || PAIR_TYPE == type(json)){
+        free(key(json));
+        free(value(json));
         free(json);
     }else{
         int i;
-        for(i = 0; i < sizeOf(json); i++){
-            delete_Json(data(json).items[i]);
+        for(i = 0; i < size(json); i++){
+            delete_Json(item(json, i));
         }
-        free(data(json).items);
+        free(items(json));
         free(json);
     }
+}
+
+#define LEFT_BIG '{'
+#define RIGHT_BIG '}'
+#define LEFT_MID '['
+#define RIGHT_MID ']'
+#define SIN_QUO '\''
+#define DOU_QUO '\"'
+#define END_CHAR '\0'
+#define COMMA ','
+#define SPACE ' '
+#define TAB_SIZE 4
+
+void prettyPrint(const char * str){
+    if(NULL == str){
+        return;
+    }
+
+    int c, l = 0, i = 0;
+    while(str[i]){
+        c = str[i++];
+        l = l < 0 ? 0 : l;
+        switch(c){
+            case LEFT_BIG:
+                ++l;
+                printf("{\n%*c", l * TAB_SIZE, SPACE);
+                break;
+            case LEFT_MID:
+                ++l;
+                printf("[\n%*c", l * TAB_SIZE, SPACE);
+                break;
+            case RIGHT_BIG:
+                --l;
+                printf("\n%*c}\n", l * TAB_SIZE, SPACE);
+                break;
+            case RIGHT_MID:
+                --l;
+                printf("\n%*c]\n", l * TAB_SIZE, SPACE);
+                break;
+            case COMMA:
+                printf(",\n%*c", l * TAB_SIZE, SPACE);
+                break;
+            default:
+                printf("%c", c);
+        }
+    }
+}
+
+struct JsonEntity * stringToAtom(const char *, int *);
+struct JsonEntity * stringToPair(const char *, int *);
+struct JsonEntity * stringToObject(const char *, int *);
+struct JsonEntity * stringToArray(const char *, int *);
+
+struct JsonEntity * (*TO_ENTITY[JSON_TYPE_COUNT])(const char *, int *) = {stringToAtom, stringToPair, stringToObject, stringToArray};
+
+int contain(char c, const char * str){
+    if(NULL == str){
+        return -1;
+    }
+    int i;
+    for(i = 0; i < strlen(str); ++i){
+        if(c == str[i]){
+            return 0;
+        }
+    }
+    return 1;
+}
+
+char * getStringEndWith(const char * src, int * offset, char end){
+    if(NULL == src){
+        return NULL;
+    }
+
+    char c, * s = NULL;
+    int len = 0, off = *offset;
+
+    while((c = src[(*offset)++])){
+        if(end == c){
+            s = strncpy(calloc(len+1, sizeof(char)), src+off, len);
+            break;
+        }
+        ++len;
+    }
+    return s;
+}
+
+struct JsonEntity ** getEntities(const char * src){
+    if(NULL == src){
+        return NULL;
+    }
+
+    int offset = 0, count = 0;
+    struct JsonEntity ** entities = (struct JsonEntity **) malloc(sizeof(void **) * 2);
+    while(src[offset]){
+        if(LEFT_BIG == src[offset]){
+            entities[count] = stringToObject(src, &offset);
+        }else if(LEFT_MID == src[offset]){
+            entities[count] = stringToArray(src, &offset);
+        }else{
+            printf("Parse Error: %s\n", src+offset);
+            exit(0);
+        }
+        ++count;
+        entities = (struct JsonEntity **) realloc(entities, (count+1)*sizeof(void **));
+    }
+    entities[count+1] = ADD_END;
+    return entities;
+}
+
+struct JsonEntity * stringToAtom(const char * src, int * offset){
+    if(NULL == src || END_CHAR == src[*offset]){
+        return NULL;
+    }
+
+    int off = *offset;
+    char * s = NULL;
+    char c = src[(*offset)++];
+    struct JsonEntity * json = NULL;
+
+    if(0 == contain(c, "\'\"")){
+        s = getStringEndWith(src, offset, c);
+    }else{
+        int len = 1;
+        while(0 != contain(src[*offset], ",]}")){
+            ++len; ++(*offset);
+        }
+        s = strncpy(calloc(len+1, sizeof(char)), src+off, len);
+    }
+    if(COMMA == src[*offset]){
+        ++(*offset);
+    }
+    json = new_Atom(s);
+    free(s);
+    return json;
+}
+
+struct JsonEntity * stringToPair(const char * src, int * offset){
+    if(NULL == src || END_CHAR == src[*offset]){
+        return NULL;
+    }
+
+    char * key = NULL;
+    char c = src[(*offset)++];
+    struct JsonEntity * json = NULL, * data = NULL;
+
+    key = getStringEndWith(src, offset, c);
+
+    ++(*offset);
+
+    if(LEFT_BIG == src[*offset]){
+        data = stringToObject(src, offset);
+    }else if(LEFT_MID == src[*offset]){
+        data = stringToArray(src, offset);
+    }else if(0 == contain(src[*offset], "\'\"")){
+        data = stringToAtom(src, offset);
+    }else if(COMMA == src[*offset]){
+        data = NULL;
+    }else{
+        data = stringToAtom(src, offset);
+    }
+    if(COMMA == src[*offset]){
+        ++(*offset);
+    }
+    json = new_Pair(key, data);
+    free(key);
+    return json;
+}
+
+struct JsonEntity * stringToObject(const char * src, int * offset){
+    if(NULL == src || END_CHAR == src[*offset]){
+        return NULL;
+    }
+
+    char c = ++(*offset);
+    struct JsonEntity * json = new_Object();
+    while((c = src[*offset])){
+        add_Child(json,
+            stringToPair(src, offset));
+        if(RIGHT_BIG == src[*offset]){
+            ++(*offset); break;
+        }
+    }
+    if(COMMA == src[*offset]){
+        ++(*offset);
+    }
+    return json;
+}
+
+struct JsonEntity * stringToArray(const char * src, int * offset){
+    if(NULL == src || END_CHAR == src[*offset]){
+        return NULL;
+    }
+
+    char c = ++(*offset);
+    struct JsonEntity * json = new_Array();
+    while((c = src[*offset])){
+        if(LEFT_BIG == c){
+            add_Child(json,
+                stringToObject(src, offset));
+        }else if(LEFT_MID == c){
+            add_Child(json,
+                stringToArray(src, offset));
+        }else{
+            add_Child(json,
+                stringToAtom(src, offset));
+        }
+        if(RIGHT_MID == src[*offset]){
+            ++(*offset); break;
+        }
+    }
+    if(COMMA == src[*offset]){
+        ++(*offset);
+    }
+    return json;
 }
