@@ -6,6 +6,7 @@
 
 int main(void)
 {
+    char * str;
     struct JsonEntity * object = new_Object();
 
     add_Children(object,
@@ -18,8 +19,10 @@ int main(void)
             new_Atom("value")),
         ADD_END);
 
-    jsonPrint(object);
+    str = getJsonString(object);
+    prettyPrint(str);
 
     delete_Json(object);
+    free(str);
     return 0;
 }

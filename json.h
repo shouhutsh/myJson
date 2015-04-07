@@ -44,8 +44,9 @@ struct JsonEntity * add_Child(struct JsonEntity *, struct JsonEntity *);
 struct JsonEntity * add_Children(struct JsonEntity *, struct JsonEntity *, ...);
 
 void jsonPrint(struct JsonEntity *);
-char * getString(struct JsonEntity *);
 void prettyPrint(const char *);
+char * getJsonString(struct JsonEntity *);
+char * dislodgeWhitespace(const char *);
 struct JsonEntity ** getEntities(const char *);
 
 struct JsonEntity * new_Atom(const char *);

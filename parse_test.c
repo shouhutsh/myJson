@@ -5,8 +5,9 @@
 int main(int args, char ** argv)
 {
     int i;
-    char * str = "{\"array\":[hello,world],\"key\":value}";
-    struct JsonEntity ** entities = getEntities(str);
+    char * str = "{\n \"array\" : [\n hello, world \n],\n \"key\" : value \n}";
+    char * temp = dislodgeWhitespace(str);
+    struct JsonEntity ** entities = getEntities(temp);
 
     for(i = 0; ADD_END != entities[i]; ++i){
         jsonPrint(entities[i]);
@@ -14,5 +15,6 @@ int main(int args, char ** argv)
     }
 
     free(entities);
+    free(temp);
 	return 0;
 }

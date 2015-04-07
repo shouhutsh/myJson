@@ -12,7 +12,7 @@ char * arrayToString(struct JsonEntity *);
 
 char * (*TO_STRING[JSON_TYPE_COUNT])(struct JsonEntity *) = {atomToString, pairToString, objectToString, arrayToString};
 
-char * getString(struct JsonEntity * json){
+char * getJsonString(struct JsonEntity * json){
     return TO_STRING[type(json)](json);
 }
 
@@ -39,7 +39,7 @@ char * pairToString(struct JsonEntity * json){
         exit(0);
     }
 
-    char * value = getString(entity(json));
+    char * value = getJsonString(entity(json));
     int len = strlen(key(json)) + (NULL == value ? 0 : strlen(value));
     char * str = (char *) calloc(len+4, sizeof(char));
 
@@ -55,7 +55,7 @@ char * OA_ToString(const struct JsonEntity * json, char left, char right){
     }else{
         int i, len = 1;
         for(i = 0; i < size; i++){
-            char * data = getString(item(json, i));
+            char * data = getJsonString(item(json, i));
             int l = strlen(data);
             str = realloc(str, len + l + 2);
             sprintf(str+len, "%s,", data);
@@ -367,4 +367,28 @@ struct JsonEntity * stringToArray(const char * src, int * offset){
         ++(*offset);
     }
     return json;
+}
+
+char * dislodgeWhitespace(const char * str){
+    if(NULL == str){
+        return NULL;
+    }
+    int s = 0, r = 0;;
+    char * res = (char *)calloc(strlen(str)+1, sizeof(char));
+
+    while(str[s]){
+        if(0 == contain(str[s], " \f\n\r\t\v")){
+            ++s;
+        }else{
+            res[r++] = str[s++];
+            if(DOU_QUO == str[s-1]){
+                char * sub = getStringEndWith(str, &s, DOU_QUO);
+                sprintf(res+r, "%s\"", sub);
+                r += strlen(sub) + 1;
+                free(sub);
+            }
+        }
+    }
+
+    return res;
 }
