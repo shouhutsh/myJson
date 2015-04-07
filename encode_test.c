@@ -12,12 +12,12 @@ int main(void)
     add_Children(object,
         new_Pair("array",
             add_Children(new_Array(),
-                new_Atom("hello"),
-                new_Atom("world"),
-                ADD_END)),
+                new_Atom("hello", DOU_QUO),
+                new_Atom("world", NONE),
+                CHILD_END)),
         new_Pair("key",
-            new_Atom("value")),
-        ADD_END);
+            new_Atom("value", SIN_QUO)),
+        CHILD_END);
 
     str = getJsonString(object);
     prettyPrint(str);

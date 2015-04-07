@@ -5,6 +5,15 @@
 
 #include "json.h"
 
+#define LEFT_BIG '{'
+#define RIGHT_BIG '}'
+#define LEFT_MID '['
+#define RIGHT_MID ']'
+#define END_CHAR '\0'
+#define COMMA ','
+#define SPACE ' '
+#define TAB_SIZE 4
+
 char * atomToString(struct JsonEntity *);
 char * pairToString(struct JsonEntity *);
 char * objectToString(struct JsonEntity *);
@@ -28,9 +37,13 @@ char * atomToString(struct JsonEntity * json){
     }
 
     int len = strlen(value(json));
-    char * str = (char *) calloc(len+1, sizeof(char));
+    char * str = (char *) calloc(len+3, sizeof(char));
 
-    sprintf(str, "%s", value(json));
+    if(NONE == sym(json)){
+        sprintf(str, "%s", value(json));
+    }else{
+        sprintf(str, "%c%s%c", sym(json), value(json), sym(json));
+    }
     return str;
 }
 
@@ -72,7 +85,7 @@ char * objectToString(struct JsonEntity * json){
         exit(0);
     }
 
-    return OA_ToString(json, '{', '}');
+    return OA_ToString(json, LEFT_BIG, RIGHT_BIG);
 }
 
 char * arrayToString(struct JsonEntity * json){
@@ -80,7 +93,7 @@ char * arrayToString(struct JsonEntity * json){
         exit(0);
     }
 
-    return OA_ToString(json, '[', ']');
+    return OA_ToString(json, LEFT_MID, RIGHT_MID);
 }
 
 struct JsonEntity * add_Child(struct JsonEntity * root, struct JsonEntity * child){
@@ -102,7 +115,7 @@ struct JsonEntity * add_Children(struct JsonEntity * root, struct JsonEntity * c
     va_list ap;
     va_start(ap, child);
 
-    while(ADD_END != child){
+    while(CHILD_END != child){
         inc(root);
         items(root) = realloc(items(root), sizeof(void **) * size(root));
         item(root, size(root)-1) = child;
@@ -113,9 +126,10 @@ struct JsonEntity * add_Children(struct JsonEntity * root, struct JsonEntity * c
     return root;
 }
 
-struct JsonEntity * new_Atom(const char * value){
+struct JsonEntity * new_Atom(const char * value, int sym){
     struct JsonEntity * json = (struct JsonEntity *) calloc(1, sizeof(struct JsonEntity));
     type(json) = ATOM_TYPE;
+    sym(json) = sym;
     value(json) = strcpy(malloc(strlen(value)+1), value);
     return json;
 }
@@ -155,16 +169,9 @@ void delete_Json(struct JsonEntity * json){
     }
 }
 
-#define LEFT_BIG '{'
-#define RIGHT_BIG '}'
-#define LEFT_MID '['
-#define RIGHT_MID ']'
-#define SIN_QUO '\''
-#define DOU_QUO '\"'
-#define END_CHAR '\0'
-#define COMMA ','
-#define SPACE ' '
-#define TAB_SIZE 4
+/*
+  上边是encode，下边是parse
+ */
 
 void prettyPrint(const char * str){
     if(NULL == str){
@@ -258,7 +265,7 @@ struct JsonEntity ** getEntities(const char * src){
         ++count;
         entities = (struct JsonEntity **) realloc(entities, (count+1)*sizeof(void **));
     }
-    entities[count+1] = ADD_END;
+    entities[count+1] = CHILD_END;
     return entities;
 }
 
@@ -269,10 +276,11 @@ struct JsonEntity * stringToAtom(const char * src, int * offset){
 
     int off = *offset;
     char * s = NULL;
-    char c = src[(*offset)++];
+    char c = src[(*offset)++], sym = 0;
     struct JsonEntity * json = NULL;
 
     if(0 == contain(c, "\'\"")){
+        sym = c;
         s = getStringEndWith(src, offset, c);
     }else{
         int len = 1;
@@ -284,7 +292,7 @@ struct JsonEntity * stringToAtom(const char * src, int * offset){
     if(COMMA == src[*offset]){
         ++(*offset);
     }
-    json = new_Atom(s);
+    json = new_Atom(s, sym);
     free(s);
     return json;
 }

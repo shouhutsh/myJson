@@ -9,7 +9,7 @@ int main(int args, char ** argv)
     char * temp = dislodgeWhitespace(str);
     struct JsonEntity ** entities = getEntities(temp);
 
-    for(i = 0; ADD_END != entities[i]; ++i){
+    for(i = 0; CHILD_END != entities[i]; ++i){
         jsonPrint(entities[i]);
         delete_Json(entities[i]);
     }

@@ -6,10 +6,15 @@
 #define PAIR_TYPE   1
 #define OBJECT_TYPE 2
 #define ARRAY_TYPE  3
-
 #define JSON_TYPE_COUNT	4
 
+#define SIN_QUO '\''
+#define DOU_QUO '\"'
+#define NONE 0
+
 typedef union{
+    int sym;
+
     char * key;
 
     int size;
@@ -29,11 +34,12 @@ struct JsonEntity {
     Value data;
 };
 
-#define ADD_END ((struct JsonEntity *) NULL)
+#define CHILD_END ((struct JsonEntity *) NULL)
 
 #define type(json) ((json)->type)
-#define size(json) ((json)->desc.size)
+#define sym(json) ((json)->desc.sym)
 #define key(json) ((json)->desc.key)
+#define size(json) ((json)->desc.size)
 #define value(json) ((json)->data.value)
 #define entity(json) ((json)->data.entity)
 #define items(json) ((json)->data.items)
@@ -49,7 +55,7 @@ char * getJsonString(struct JsonEntity *);
 char * dislodgeWhitespace(const char *);
 struct JsonEntity ** getEntities(const char *);
 
-struct JsonEntity * new_Atom(const char *);
+struct JsonEntity * new_Atom(const char *, int);
 struct JsonEntity * new_Pair(const char *, struct JsonEntity *);
 struct JsonEntity * new_Object();
 struct JsonEntity * new_Array();
